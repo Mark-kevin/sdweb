@@ -1,0 +1,32 @@
+app:
+  app_name: sdweb
+  app_port: 127.0.0.1:7733
+
+path:
+  stable_diffusion: /Users/mr.kevin/test/tmp/stable-diffusion-webui
+  lora_path: models/Lora
+  sd_base_path: models/Stable-diffusion
+  remove_path: models/0000
+  tmp_path: /Users/mr.kevin/test/tmp/stable-diffusion-webui/tmp
+
+bash:
+  path: /Users/mr.kevin/test/tmp/stable-diffusion-webui
+#  path: /usr/local/data/stable-dif/stable-diffusion-webui
+  file: restart.sh
+
+
+
+#app:
+#  app_name: sdweb
+#  app_port: 127.0.0.1:7733
+#
+#path:
+#  stable_diffusion: /usr/local/data/stable-dif/stable-diffusion-webui
+#  lora_path: models/Lora
+#  sd_base_path: models/Stable-diffusion
+#  remove_path: models/0000
+#  tmp_path: /usr/local/data/stable-dif/tmp
+#
+#bash:
+#  path: /usr/local/data/stable-dif/stable-diffusion-webui
+#  file: restart.sh

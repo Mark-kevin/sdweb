@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Home Page</title>
+    <link rel="stylesheet" href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <style>
+        .title {
+            text-align: center;
+            font-size: 42px;
+            margin-top: 100px;
+            margin-bottom: 50px;
+        }
+        .btn-group {
+            display: flex;
+            justify-content: center;
+        }
+        .btn-group .btn {
+            margin: 10px;
+        }
+        .btn-group .btn:last-child {
+            width: 200px;
+        }
+
+        .upload {
+            text-align: center;
+            margin-top: 100px;
+            margin-bottom: 50px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 18px; /* 调整字体大小 */
+        }
+
+        .upload .title {
+            font-size: 42px;
+            margin-bottom: 20px;
+        }
+
+        .upload form {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .upload select {
+            margin-right: 10px;
+            text-align: center;
+            width: 150px; /* 调整 select 宽度 */
+            height: 40px; /* 调整 select 高度 */
+            font-size: 20px; /* 调整字体大小 */
+            border-radius: 5px; /* 添加圆角 */
+            border: 1px solid #999; /* 添加边框 */
+        }
+
+        select:hover {
+            border-color: #aaa; /* 鼠标悬停时改变边框颜色 */
+        }
+
+        select:focus {
+            border-color: #4d90fe; /* 获得焦点时改变边框颜色 */
+            box-shadow: 0 0 0 2px rgba(77,144,254,0.2); /* 获得焦点时添加阴影 */
+        }
+
+        .upload input[type="file"] {
+            margin-right: 10px;
+        }
+
+        .upload button {
+            width: 200px; /* 调整按钮宽度 */
+            margin: 10px;
+            font-size: 18px; /* 调整字体大小 */
+            padding: 10px 20px; /* 调整按钮的 padding */
+            border-radius: 5px; /* 添加圆角 */
+            border: none; /* 去掉边框 */
+            background-color: #327ab7; /* 修改按钮背景色 */
+            color: #fff; /* 修改按钮文字颜色 */
+        }
+
+
+        .upload button:focus {
+            outline: none;
+        }
+
+        .upload .error {
+            color: red;
+            margin-top: 10px;
+        }
+
+        .upload button:hover {
+            background-color: #27608f; /* 修改鼠标悬停时按钮背景色 */
+            color: #fff; /* 修改鼠标悬停时按钮文字颜色 */
+        }
+
+        .upload button:focus {
+            outline: none; /* 去掉按钮聚焦时的边框 */
+        }
+
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="row">
+        <div class="col-md-12 title">
+            Stable Diffusion 操作首页
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <div class="btn-group btn-group-lg" role="group" aria-label="...">
+                <button type="button" class="btn btn-primary" onclick="location.href='/sdweb/sd'">SD 模型页</button>
+                <button type="button" class="btn btn-primary" onclick="location.href='/sdweb/lora'">Lora 模型页</button>
+                <button type="button" class="btn btn-primary" onclick="location.href='/sdweb/del'">待删除模型页</button>
+                <button type="button" class="btn btn-primary" onclick="location.href='/sdweb/sys'">服务器系统页</button>
+                <button type="button" class="btn btn-info" onclick="location.href='/sdweb/restart'">重启 stable diffusion</button>
+            </div>
+        </div>
+    </div>
+    <div class="upload">
+        <div class="col-md-12 title">
+            上传文件部分
+        </div>
+        <div >
+            <form action="/sdweb/upload" method="post" enctype="multipart/form-data" onsubmit="return checkUpload()">
+                <label for="type">选择类型：</label>
+                <select id="type" name="type" required>
+                    <option value="">请选择类型</option>
+                    <option value="sd">sd</option>
+                    <option value="lora">lora</option>
+                </select>
+
+                <label for="file">上传文件：</label>
+                <input type="file" id="file" name="file" required>
+
+                <button type="submit">上传</button>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+<script>
+    function checkUpload() {
+        var type = document.querySelector('select[name="type"]').value;
+        var file = document.querySelector('input[type="file"]').value;
+        if (!type || !file) {
+            alert("请选择类型和文件");
+            return false;
+        }
+        const fileInput = document.getElementById('file');
+        const fileSize = fileInput.files[0].size; // 获取文件大小，单位为字节
+        if (fileSize > 10*1024*1024) {
+            // 文件大小大于 10MB，使用流式上传方式
+            console.log('文件大小大于 10MB 上传失败');
+            // uploadBigFile(fileInput.files[0]);
+            return false;
+        }
+        // 文件大小小于等于 10MB，使用普通的表单方式上传
+        return true;
+    }
+
+    function uploadBigFile(file) {
+        const chunkSize = 1024 * 1024; // 分片大小，单位为字节
+        const totalChunks = Math.ceil(file.size / chunkSize); // 总分片数
+        let currentChunk = 0; // 当前上传的分片编号
+        let bytesUploaded = 0; // 已上传的字节数
+
+        // 创建 XMLHttpRequest 对象
+        const xhr = new XMLHttpRequest();
+
+        // 监听上传进度
+        xhr.upload.addEventListener('progress', function(event) {
+            if (event.lengthComputable) {
+                // 更新进度条和进度文本框
+                const percent = Math.round((bytesUploaded + event.loaded) * 100 / fileSize);
+                const progressBar = document.getElementById('progressBar');
+                const progressText = document.getElementById('progressText');
+                progressBar.value = percent;
+                progressText.value = percent + '%';
+            }
+        });
+
+        // 监听上传完成事件
+        xhr.addEventListener('load', function() {
+            console.log('上传完成');
+            alert('文件上传成功！');
+        });
+
+        // 监听上传出错事件
+        xhr.addEventListener('error', function() {
+            console.error('上传出错！');
+            alert('文件上传失败！');
+        });
+
+        // 上传第一片
+        uploadChunk(currentChunk);
+
+        function uploadChunk(chunkIndex) {
+            // 计算分片的起始和结束位置
+            const start = chunkIndex * chunkSize;
+            const end = start + chunkSize >= file.size ? file.size : start + chunkSize;
+
+            // 创建分片对象
+            const chunk = file.slice(start, end);
+
+            // 创建表单数据对象
+            const formData = new FormData();
+            formData.append('type', document.getElementById('type').value);
+            formData.append('chunkIndex', chunkIndex);
+            formData.append('totalChunks', totalChunks);
+            formData.append('chunk', chunk);
+
+            // 发送分片数据
+            xhr.open('POST', '/upload', true);
+            xhr.send(formData);
+
+            // 更新已上传的字节数
+            bytesUploaded += end - start;
+
+            // 如果未上传所有分片，上传下一片
+            if (++currentChunk < totalChunks) {
+                setTimeout(function() {
+                    uploadChunk(currentChunk);
+                }, 100);
+            } else {
+                console.log('所有分片上传完成');
+            }
+        }
+    }
+
+    // 上传文件 在前端页面中，我们需要将文件分成固定大小的块，并使用 AJAX 调用后端接口上传每个块。示例代码如下：
+    function uploadFile(file) {
+        let blockSize = 10 * 1024 * 1024; // 每个块的大小设置为 10MB
+        let fileSize = file.size;
+        let blockCount = Math.ceil(fileSize / blockSize);
+        let blockIndex = 0;
+
+        // 开始上传块
+        uploadNextBlock();
+
+        function uploadNextBlock() {
+            let blockStart = blockIndex * blockSize;
+            let blockEnd = Math.min(blockStart + blockSize, fileSize);
+            let chunk = file.slice(blockStart, blockEnd);
+            let formData = new FormData();
+            formData.append('file', chunk);
+            formData.append('blockIndex', blockIndex);
+            formData.append('blockCount', blockCount);
+
+            // 使用 AJAX 发送块数据到服务器
+            $.ajax({
+                url: '/upload',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(data) {
+                    if (blockIndex < blockCount - 1) {
+                        // 上传成功，继续上传下一个块
+                        blockIndex++;
+                        uploadNextBlock();
+                    } else {
+                        // 已上传所有块，上传完成
+                        console.log('Upload completed:', data);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.log('Upload failed:', error);
+                }
+            });
+        }
+    }
+</script>
+</html>

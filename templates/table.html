@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件列表</title>
+    <link rel="stylesheet" href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <style>
+        .button-container {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-left: 20px;
+            padding-top: 10px;
+        }
+        .container {
+            width: 90%;
+            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+            flex-direction: column;
+            align-items: center;
+            color: #444; /* 更改文字颜色 */
+        }
+
+        table {
+            width: 80%;
+            border-collapse: collapse;
+            border-spacing: 0;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1); /* 添加阴影效果 */
+            background-color: #fff; /* 更改表格背景颜色 */
+        }
+
+        th,
+        td {
+            padding: 10px 15px; /* 减少列的宽度 */
+            border: 1px solid #ccc;
+            text-align: center;
+        }
+
+        th:first-child,
+        td:first-child,
+        th:last-child,
+        td:last-child {
+            width: 10%; /* 减少第一列和最后一列的宽度 */
+        }
+        th:nth-child(3),
+        td:nth-child(3) {
+            width: 20%; /* 减少第三列宽度 */
+        }
+
+        tr:nth-child(even) {
+            background-color: #dff9fb; /* 更改交替行颜色 */
+        }
+
+        th {
+            background-color: #2980b9; /* 更改表头背景颜色 */
+            color: #fff; /* 更改表头文字颜色 */
+        }
+
+    </style>
+</head>
+<body>
+<div class="button-container">
+    <button type="button" class="btn btn-primary" onclick="location.href='/sdweb/'">返回首页</button>
+</div>
+<div class="container">
+    <h1>{{ .Type }}</h1>
+    <table class="container-table">
+        <thead>
+        <tr>
+            <th>序号</th>
+            <th>文件名</th>
+            <th>文件大小</th>
+            <th>移除文件</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{ range $index, $file := .Files }}
+        <tr>
+            <td>{{ add $index 1 }}</td>
+            <td>{{ $file.Name }}</td>
+            <td>{{ $file.Size }}</td>
+            <td><a href="/sdweb/remove?id={{$file.Id}}">移除</a></td>
+        </tr>
+        {{ end }}
+        </tbody>
+    </table>
+</div>
+</body>
+</html>
