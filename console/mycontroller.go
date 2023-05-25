@@ -1,9 +1,11 @@
 package console
 
 import (
+	"bufio"
 	"encoding/csv"
+	"encoding/json"
+	"fmt"
 	"github.com/astaxie/beego"
-	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
 	"io"
 	"kevin/sdweb/core"
@@ -15,7 +17,8 @@ import (
 
 type MainController struct {
 	beego.Controller
-	Logger *logrus.Logger
+	Logger   *logrus.Logger
+	progress int
 }
 
 func (c *MainController) Prepare() {
@@ -48,72 +51,92 @@ func (c *MainController) Restart0() {
 	c.TplName = "restart.html"
 }
 
-var upgrader = websocket.Upgrader{}
-var wsBroadcast = make(chan string)
-
-func (c *MainController) WsHandler() {
-	ws, err := websocket.Upgrade(c.Ctx.ResponseWriter, c.Ctx.Request, nil, 1024, 1024)
-	if err != nil {
-		c.Logger.Errorf("%s: %v", "升级到 WebSocket 连接失败", err)
-		return
-	}
-
-	// 监听新消息并推送到客户端
-	go func() {
-		for msg := range wsBroadcast {
-
-			err := ws.WriteMessage(websocket.TextMessage, []byte(msg))
-			if err != nil {
-				c.Logger.Errorf("向客户端推送新消息失败：%v", err)
-				break
-			}
-		}
-		ws.Close()
-	}()
-
-	//用于监听客户端的消息 暂时没用
-	//go func() {
-	//	for {
-	//		_, msg, err := ws.ReadMessage()
-	//		if err != nil {
-	//			c.Logger.Errorf("接收客户端回复的消息失败：%v", err)
-	//			break
-	//		}
-	//		// 收到客户端消息后，可以在这里处理
-	//		c.Logger.Info(msg)
-	//	}
-	//}()
-
-}
-
 // Restart /* 重启脚本 */
 func (c *MainController) Restart() {
 	// 创建通道
-	wsBroadcast = make(chan string)
 	outputCh := make(chan string)
-
+	doneCh := make(chan struct{}) // 结束标记通道
+	cmdLogPath := "./conf/cmd.log"
+	c.progress = 0
 	// 启动子协程监听命令输出
 	go func() {
 		cmd := exec.Command("/bin/bash", os.Getenv("bashPath"))
 		err := core.RunCmdCh(cmd, c.Logger, outputCh)
-		handleError(c.Logger, err, "命令执行失败")
-		close(outputCh) // 关闭通道，表示命令已经执行完毕
+		handleError(c.Logger, err, "执行命令失败")
+		doneCh <- struct{}{} // 发送结束标记
 	}()
 
-	// 启动 WebSocket 服务器并监听通道消息
-	go c.WsHandler()
-
-	// 推送输出结果到 WebSocket 服务器
+	// 写入日志文件
 	go func() {
-		for output := range outputCh {
-			wsBroadcast <- output
+		file, err := os.OpenFile(cmdLogPath, os.O_APPEND|os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+		handleError(c.Logger, err, "打开cmd日志文件失败")
+		defer file.Close()
+		for {
+			select {
+			case msg := <-outputCh:
+				_, err := file.WriteString(msg + "\n")
+				handleError(c.Logger, err, "cmd日志文件写入失败")
+			case <-doneCh:
+				// 命令执行完毕，写入日志文件的子协程结束
+				close(outputCh)
+				c.progress = 100
+				return
+			}
 		}
-		close(wsBroadcast)
 	}()
-	//wsIp := "ws://" + os.Getenv("appPort") + "/sdweb/ws"
-	//c.Logger.Info("wsip: " + wsIp)
-	//c.Data["WsIp"] = wsIp
+
 	c.TplName = "restart.html"
+}
+
+type ResultJSON struct {
+	Status int         `json:"status"`
+	Msg    string      `json:"msg"`
+	Data   interface{} `json:"data"`
+}
+
+// 在相应的控制器中添加如下代码
+func (c *MainController) GetCmdLogs() {
+	fmt.Println("执行获取信息.....", c.progress)
+	// 读取日志文件的内容
+	logFilePath := "./conf/cmd.log"
+	file, err := os.Open(logFilePath)
+	handleError(c.Logger, err, "打开cmd日志文件失败")
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	var lines []string
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+	err = scanner.Err()
+	handleError(c.Logger, err, "读取cmd日志文件失败")
+
+	// 返回数组 logs 的 JSON 表示
+	resp := make(map[string]interface{})
+	jsonBytes, _ := json.Marshal(lines)
+	resp["lines"] = string(jsonBytes)
+	if c.progress == 100 {
+		fmt.Println("读取完全!!!")
+		resp["progress"] = 100
+	} else {
+		resp["progress"] = 0
+	}
+	c.Data["json"] = resp
+	c.ServeJSON()
+	//data := make(map[string]interface{})
+	//
+	//data["lines"] = lines
+	//if c.progress == 100 {
+	//	fmt.Println("读取完全!!!")
+	//	data["progress"] = 100
+	//} else {
+	//	data["progress"] = 0
+	//}
+	//// 设置响应头，设置 content-type 为 JSON 格式
+	//c.Ctx.Output.Header("Content-Type", "application/json")
+	//result := ResultJSON{Status: 200, Msg: "success", Data: data}
+	//// 设置响应数据并返回
+	//c.Data["json"] = result
+	//c.ServeJSON()
 }
 
 // SystemInfo /* 系统情况页,每次点击刷新 */

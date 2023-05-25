@@ -23,7 +23,7 @@ func WebInit() {
 
 	//websocket
 	beego.Router("/sdweb/restart", control, "get:Restart")
-	beego.Router("/sdweb/ws", control, "get:WsHandler")
+	beego.Router("/sdweb/cmd_logs", control, "get:GetCmdLogs")
 }
 
 func BeegoConf() {

@@ -11,7 +11,6 @@ path:
 
 bash:
   path: /Users/mr.kevin/test/tmp/stable-diffusion-webui
-#  path: /usr/local/data/stable-dif/stable-diffusion-webui
   file: restart.sh
 
 

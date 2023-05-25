@@ -103,6 +103,7 @@ func RunCmd(cmd *exec.Cmd, log *logrus.Logger) ([]string, error) {
 	return outList, nil
 }
 
+// RunCmdCh 执行cmd命令
 func RunCmdCh(cmd *exec.Cmd, log *logrus.Logger, outputCh chan string) error {
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -110,7 +111,7 @@ func RunCmdCh(cmd *exec.Cmd, log *logrus.Logger, outputCh chan string) error {
 		return err
 	}
 	stderr, err := cmd.StderrPipe()
-	log.Info("stderr: ", stderr)
+	log.Info("CMD错误监控 stderr管道指针(/u0026=$): ", stderr)
 	if err != nil {
 		log.Errorf("无法获取标准错误输出：%v", err)
 		return err

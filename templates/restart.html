@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <title>日志输出</title>
     <link rel="stylesheet" href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <style>
         .button-container {
             display: flex;
@@ -14,6 +15,7 @@
             padding-left: 20px;
             padding-top: 10px;
         }
+
         body {
             font-family: Arial, Helvetica, sans-serif;
             font-size: 16px;
@@ -76,31 +78,38 @@
 <body>
 <div class="button-container">
     <button type="button" class="btn btn-primary" onclick="location.href='/sdweb/'">返回首页</button>
-    <button type="button" class="btn btn-primary" onclick="location.href='/sdweb/ws'">输出日志</button>
 </div>
 <div class="container">
     <h1>日志输出</h1>
     <div class="output">
         <div id="logs"></div>
     </div>
-    <input type="hidden" id="ws-url" value="{{ .WsIp }}">
 </div>
 </body>
 <script>
-    // 使用 JavaScript 创建 WebSocket 连接，并监听服务端传输的消息
-    // var wsUrl = document.getElementById("ws-url").value;
-    // var ws = new WebSocket(wsUrl);
-    var ws = new WebSocket("wss://127.0.0.1:7733/sdweb/ws", {
-        headers: {
-            Connection: 'Upgrade',
-            Upgrade: 'websocket'
+    $(document).ready(function() {
+        getLogs();
+        function getLogs(){
+            $.ajax({
+                url: "/sdweb/cmd_logs",  // 后端接口获取日志信息的路由地址
+                type: "GET",
+                dataType: "json",
+                success: function(response) {
+                    // 解析 JSON 数据
+                    var progress = response.progress;
+                    var lines = JSON.parse(response.lines);
+                    $('#logs').text("");
+                    lines.forEach(line => {
+                        // 成功获取到日志信息后，在页面上显示新的日志内容
+                        $('#logs').append(line+ '<br>');
+                    });
+                    if(progress < 100){
+                        setTimeout(getLogs, 1000); // Poll for progress every 1 second
+                    }
+                }
+            });
         }
     });
-    ws.onmessage = function(event) {
-        var log = document.createElement('p');
-        log.innerHTML = event.data;
-        document.getElementById('logs').appendChild(log);
-    }
 </script>
 
 </html>
