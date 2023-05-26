@@ -3,18 +3,122 @@ package core
 import (
 	"bufio"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
+	cpu "github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/disk"
+	"github.com/shirou/gopsutil/v3/load"
+	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 )
 
-func GetSystemInfo() SystemMeta {
-	var SystemMeta SystemMeta
+func GetSystemInfo0() SystemMeta {
+	var systemMeta SystemMeta
+	memorySystem := make(map[string]string)
+	cpuSystem := make(map[string]string)
+	diskStorage := make(map[string]string)
+	cpuUsage := make(map[string]string)
+	loadAverage := make(map[string]string)
+	memorySystem["Info"] = "memorySystem信息"
+	cpuSystem["Info"] = "cpuSystem信息"
+	diskStorage["Info"] = "diskStorage信息"
+	cpuUsage["Info"] = "cpuUsage信息"
+	loadAverage["Info"] = "loadAverage信息"
 
-	return SystemMeta
+	systemMeta.MemorySystem = memorySystem
+	systemMeta.CpuSystem = cpuSystem
+	systemMeta.CpuUsage = cpuUsage
+	systemMeta.DiskStorage = diskStorage
+	systemMeta.LoadAverage = loadAverage
+	return systemMeta
+}
+
+func GetSystemInfo() SystemMeta {
+	var systemMeta SystemMeta
+	memorySystem := make(map[string]string)
+	cpuSystem := make(map[string]string)
+	diskStorage := make(map[string]string)
+	cpuUsage := make(map[string]string)
+	loadAverage := make(map[string]string)
+
+	cpuSystems := make([]map[string]string, 0)
+	diskStorages := make([]map[string]string, 0)
+	cpuUsages := make(map[string]string)
+
+	//内存
+	v, _ := mem.VirtualMemory()
+	memorySystem["Info"] = v.String()
+	fmt.Println(memorySystem["Info"])
+	//memorySystem["Total"] = string(v.Total)
+	//memorySystem["Free"] = string(v.Free)
+	//memorySystem["UsedPercent"] = fmt.Sprintf("%.2f", v.UsedPercent)
+	//memorySystem["Total"] = string(v.Total)
+
+	//cpu
+	// 将 CPU 信息存储在 map 中
+	cpuInfos, _ := cpu.Info()
+	for _, info := range cpuInfos {
+		cpuInfo := make(map[string]string)
+		cpuInfo["ModelName"] = info.ModelName
+		cpuInfo["Cores"] = fmt.Sprintf("%d", info.Cores)
+		cpuInfo["PhysicalID"] = info.PhysicalID
+		cpuInfo["CoreID"] = info.CoreID
+		cpuSystems = append(cpuSystems, cpuInfo)
+	}
+	cpuSystemString, _ := json.Marshal(cpuSystems)
+	cpuSystem["Info"] = string(cpuSystemString)
+	fmt.Println(cpuSystem["Info"])
+
+	// CPU使用率
+	cpuPercent, _ := cpu.Percent(time.Second, false)
+	// 将每个 CPU 的使用率存储在 map 中
+	count := len(cpuPercent)
+	cpuUsages["Count"] = fmt.Sprintf("%d", count)
+	for i, percent := range cpuPercent {
+		cpuUsages[fmt.Sprintf("CPU%d", i)] = fmt.Sprintf("%.2f%%", percent)
+	}
+	cpuUsageString, _ := json.Marshal(cpuUsages)
+	cpuUsage["Info"] = string(cpuUsageString)
+	fmt.Println(cpuUsage["Info"])
+
+	//磁盘disk
+	partitions, _ := disk.Partitions(true)
+	for _, partition := range partitions {
+		usage, err := disk.Usage(partition.Mountpoint)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		diskInfo := make(map[string]string)
+		diskInfo["Filesystem"] = usage.Fstype
+		diskInfo["Size"] = fmt.Sprintf("%.2f GB", float64(usage.Total)/(1024*1024*1024))
+		diskInfo["Used"] = fmt.Sprintf("%.2f GB", float64(usage.Used)/(1024*1024*1024))
+		diskInfo["Free"] = fmt.Sprintf("%.2f GB", float64(usage.Free)/(1024*1024*1024))
+		diskInfo["Usage"] = fmt.Sprintf("%.2f%%", usage.UsedPercent)
+		diskStorages = append(diskStorages, diskInfo)
+	}
+	diskStorageString, _ := json.Marshal(diskStorages)
+	diskStorage["Info"] = string(diskStorageString)
+	fmt.Println(diskStorage["Info"])
+
+	//load average
+	stat, _ := load.Avg()
+	jsonstat, _ := json.Marshal(stat)
+	loadAverage["Info"] = string(jsonstat)
+	fmt.Println(diskStorage["Info"])
+
+	systemMeta.MemorySystem = memorySystem
+	systemMeta.CpuSystem = cpuSystem
+	systemMeta.CpuUsage = cpuUsage
+	systemMeta.DiskStorage = diskStorage
+	systemMeta.LoadAverage = loadAverage
+	return systemMeta
 }
 
 func GetFiles(fileType string, log *logrus.Logger) []FileMeta {

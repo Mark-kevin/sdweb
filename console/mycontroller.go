@@ -141,10 +141,13 @@ func (c *MainController) GetCmdLogs() {
 
 // SystemInfo /* 系统情况页,每次点击刷新 */
 func (c *MainController) SystemInfo() {
+	fmt.Println("跳转")
 	sys := core.GetSystemInfo()
-	c.Data["Disk"] = sys.DiskStorage
-	c.Data["Memory"] = sys.MemorySystem
-	c.Data["Cpu"] = sys.CpuSystem
+	c.Data["Disk"] = sys.DiskStorage["Info"]
+	c.Data["Memory"] = sys.MemorySystem["Info"]
+	c.Data["LoadAverage"] = sys.LoadAverage["Info"]
+	c.Data["Cpu"] = sys.CpuSystem["Info"]
+	c.Data["CpuUsage"] = sys.CpuUsage["Info"]
 	c.TplName = "sys.html"
 }
 
