@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 )
 
 func GetSystemInfo() SystemMeta {
@@ -51,7 +52,7 @@ func GetFiles(fileType string, log *logrus.Logger) []FileMeta {
 		}
 	} else {
 		for _, line := range lines {
-			// 取第三列和第五列的值，并判断是否符合条件
+			// 取第四列的值，并判断是否符合条件
 			if line[4] == "1" {
 				file := FileMeta{
 					Id:    line[0],
@@ -67,9 +68,102 @@ func GetFiles(fileType string, log *logrus.Logger) []FileMeta {
 	return files
 }
 
-func RemoveFileById(id string, log *logrus.Logger) {}
+func ReadFiles(path string, log *logrus.Logger) [][]string {
+	file, err := os.Open(path)
+	if err != nil {
+		log.Error(err)
+	}
+	defer file.Close()
 
-func DeleteFileById(id string, log *logrus.Logger) {}
+	// 创建一个 CSV Reader
+	reader := csv.NewReader(file)
+	reader.Comma = ',' // 设置分隔符
+
+	// 读取 CSV 文件的每一行
+	lines, err := reader.ReadAll()
+	if err != nil {
+		log.Error(err)
+	}
+	return lines
+}
+func ReWriteFile(path string, lines [][]string, log *logrus.Logger) {
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	defer file.Close()
+
+	// 创建一个 CSV Writer
+	writer := csv.NewWriter(file)
+	writer.Comma = ',' // 设置分隔符
+
+	// 将 CSV 数据写入文件
+	err = writer.WriteAll(lines)
+	if err != nil {
+		log.Error("报错::", err)
+		return
+	}
+
+	// 刷新缓冲区
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		log.Error("报错::", err)
+		return
+	}
+}
+
+func RemoveFile(id string, fType string, log *logrus.Logger) {
+	lines := ReadFiles("./conf/data.csv", log)
+	var newLines [][]string
+	for _, line := range lines {
+		// 取第1列和第3列的值，并判断是否符合条件
+		if line[0] == id && line[2] == fType {
+			line[4] = "1"
+		}
+		newLines = append(newLines, line)
+	}
+	ReWriteFile("./conf/data.csv", newLines, log)
+}
+func BackFile(id string, fType string, log *logrus.Logger) {
+	lines := ReadFiles("./conf/data.csv", log)
+	var newLines [][]string
+	for _, line := range lines {
+		// 取第1列和第3列的值，并判断是否符合条件
+		if line[0] == id && line[2] == fType {
+			line[4] = "0"
+		}
+		newLines = append(newLines, line)
+	}
+	ReWriteFile("./conf/data.csv", newLines, log)
+}
+func DeleteFile(id string, fType string, log *logrus.Logger) {
+	lines := ReadFiles("./conf/data.csv", log)
+	var newLines [][]string
+	for _, line := range lines {
+		// 取第1列和第3列的值，并判断是否符合条件
+		if line[0] == id && line[2] == fType {
+			//删除文件
+			fPath := ""
+			if fType == "sd" {
+				fPath = os.Getenv("sdPath")
+			} else if fType == "lora" {
+				fPath = os.Getenv("loraPath")
+			} else {
+				fmt.Println("删除文件类型错误", fType, id)
+				continue
+			}
+			//删除目录的对应文件
+			err := os.Remove(filepath.Join(fPath, line[1]))
+			if err != nil {
+				log.Error(err)
+			}
+			continue
+		}
+		newLines = append(newLines, line)
+	}
+	ReWriteFile("./conf/data.csv", newLines, log)
+}
 
 func RunCmd(cmd *exec.Cmd, log *logrus.Logger) ([]string, error) {
 	stdout, err := cmd.StdoutPipe()

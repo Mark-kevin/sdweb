@@ -14,9 +14,10 @@ func WebInit() {
 	beego.Router("/sdweb/del", control, "get:RemoveInfo")
 
 	//操作用
-
 	beego.Router("/sdweb/1", control, "get:InsertData")       //开发 导入数据用
 	beego.Router("/sdweb/remove", control, "get:RemoveModel") //
+	beego.Router("/sdweb/back", control, "get:BackModel")     //
+	beego.Router("/sdweb/delete", control, "get:DeleteModel") //
 	//beego.Router("/upload", control, "post:UploadModel") // 上传大文件
 	//beego.Router("/upload", control, "post:UploadFile") //上传大文件-新
 	beego.Router("/sdweb/upload", control, "post:UploadTmp") //上传大文件-临时

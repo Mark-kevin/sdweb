@@ -151,6 +151,7 @@ func (c *MainController) SystemInfo() {
 // LoraInfo /* Lora页 */
 func (c *MainController) LoraInfo() {
 	c.Data["Type"] = "Lora模型页"
+	c.Data["fType"] = "lora"
 	files := core.GetFiles("lora", c.Logger)
 	c.Data["Files"] = files
 	c.TplName = "table.html"
@@ -159,6 +160,7 @@ func (c *MainController) LoraInfo() {
 // SdBaseInfo /* SD页 */
 func (c *MainController) SdBaseInfo() {
 	c.Data["Type"] = "SD模型页"
+	c.Data["fType"] = "sd"
 	files := core.GetFiles("sd", c.Logger)
 	c.Data["Files"] = files
 	c.TplName = "table.html"
@@ -167,12 +169,13 @@ func (c *MainController) SdBaseInfo() {
 // RemoveInfo /* 待删除页 */
 func (c *MainController) RemoveInfo() {
 	c.Data["Type"] = "待删除模型页"
+	c.Data["fType"] = "del"
 	files := core.GetFiles("del", c.Logger)
 	c.Data["Files"] = files
 	c.TplName = "table.html"
 }
 
-// AddModel /* 增加模型 */
+// AddModel /* 增加模型-暂不用-被UploadTmp代替 */
 func (c *MainController) AddModel() {
 	c.TplName = "index.html"
 }
@@ -180,22 +183,25 @@ func (c *MainController) AddModel() {
 // RemoveModel /* 移除模型但不删 */
 func (c *MainController) RemoveModel() {
 	id := c.GetString("id")
-	core.RemoveFileById(id, c.Logger)
-	c.Data["id"] = id
-	c.TplName = "index.html"
+	fType := c.GetString("type")
+	core.RemoveFile(id, fType, c.Logger)
+	c.Redirect("/sdweb/del", 302)
 }
 
 // BackModel /* 移回模型 */
 func (c *MainController) BackModel() {
-	c.Data["file_name"] = c.GetString("file_name")
-	c.TplName = "index.html"
+	id := c.GetString("id")
+	fType := c.GetString("type")
+	core.BackFile(id, fType, c.Logger)
+	c.Redirect("/sdweb/del", 302)
 }
 
 // DeleteModel /* 删除模型-真删 */
 func (c *MainController) DeleteModel() {
-	c.Data["file_name"] = c.GetString("file_name")
-
-	c.TplName = "index.html"
+	id := c.GetString("id")
+	fType := c.GetString("type")
+	core.DeleteFile(id, fType, c.Logger)
+	c.Redirect("/sdweb/del", 302)
 }
 
 func (c *MainController) UploadTmp() {
